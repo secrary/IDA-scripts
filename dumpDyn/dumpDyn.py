@@ -50,7 +50,7 @@ def save_x(unique_name, start, size):
                   serial_data = pickle.dumps(saved_data)
                   ifile.write(serial_data)
     
-def restore_x(unique_name, start):
+def restore_x(unique_name, start=here()):
       
       if MD5_hash_data_file and os.path.isfile(MD5_hash_data_file):
             with open(MD5_hash_data_file, "rb") as ifile:
