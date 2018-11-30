@@ -57,13 +57,13 @@ def save_x(unique_name=None, start=None, size=None):
       # save comments
       comms_addr_type_comm = []
       # (addr, TYPE, comment)
-      # type 1:comment 2:rpt_comment
+      # type 0:comment 1:rpt_comment
       end = start + size
       for i in range(start, end + 1):
-            if Comment(i):
-                  comms_addr_type_comm.append((i - start, 1, Comment(i)))
-            if RptCmt(i):
-                  comms_addr_type_comm.append((i - start, 2, RptCmt(i)))
+            if ida_bytes.get_cmt(i, 0): # 0 Comment
+                  comms_addr_type_comm.append((i - start, 0, ida_bytes.get_cmt(i, 0)))
+            if ida_bytes.get_cmt(i, 1): # 1 RptCmt
+                  comms_addr_type_comm.append((i - start, 1, ida_bytes.get_cmt(i, 1)))
       
       # breakpoints
       bpts_addr_size_type = []
@@ -117,11 +117,9 @@ def restore_x(unique_name=None, start=None):
                         # comms: (rel_addr, TYPE, comment)
                         comms = current_data[3]
                         for comm in comms:
-                              # 1:MakeComm and 2:MakeRptCmt
-                              if comm[1] == 1:
-                                    MakeComm(start + comm[0], comm[2])
-                              else:
-                                    MakeRptCmt(start + comm[0], comm[2])
+                              # 0:MakeComm and 1:MakeRptCmt
+                              ida_bytes.set_cmt(start + comm[0], comm[2], comm[1])
+
                         
                         # restore breakpoints
                         # bpts: (rel_addr, size, type)
@@ -131,12 +129,14 @@ def restore_x(unique_name=None, start=None):
     
 
 def main():
-    print("Usage:\n\
+    print("\nUsage:\n\
     save_x(\"unique_name\", start_addr, size) - save names, comments, breakpoints\n\
     restore_x(\"unique_name\", start_addr) - restore names, comments, breakpoints\n\
     Example:\n\t\
     save_x(\"first_shellcode\", 0x12340000, 0x1000)\n\t\
     restore_x(\"first_shellcode\", 0x12340000)\n\t\
+    save_x(\"f1\", here(), 0x1000)\n\t\
+    restore_x(\"f1\", here())\n\
     \nBONUS: useful if a process allocated a new segment (e.g. VirtualAlloc) otherwise (HeapAlloc, new, etc.) use the first way\n\t\
     save_x() == save_x(FIRST_0x10_BYTES_HASH_FROM_EA_SEGMENT, START_OF_EA_SEGMENT, SIZEOF_EA_SEGMENT)\n\t\
     restore_x() == restore(FIRST_0x10_BYTES_HASH_FROM_EA_SEGMENT, START_OF_EA_SEGMENT)\n\
