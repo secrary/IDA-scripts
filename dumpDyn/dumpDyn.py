@@ -190,7 +190,7 @@ def main():
         act_icon_save)): 
 
             # Insert the action in a toolbar
-            idaapi.attach_action_to_toolbar("AnalysisToolBar", act_name_save)
+            idaapi.attach_action_to_toolbar("DebugToolBar", act_name_save)
 
             if idaapi.register_action(idaapi.action_desc_t(
             act_name_restore,
@@ -201,7 +201,7 @@ def main():
             act_icon_restore)):
 
                   # Insert the action in a toolbar
-                  idaapi.attach_action_to_toolbar("AnalysisToolBar", act_name_restore)
+                  idaapi.attach_action_to_toolbar("DebugToolBar", act_name_restore)
             
       else: 
             idaapi.unregister_action(act_name_save)
