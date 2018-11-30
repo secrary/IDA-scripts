@@ -1,9 +1,17 @@
+#-------------------------------------------------------------------------------
+#
+# Copyright (c) 2018, Lasha Khasaia @_qaz_qaz
+# Licensed under the GNU GPL v3.
+#
+#-------------------------------------------------------------------------------
+
 import os
+import hashlib
+import pickle 
+
 import ida_name
 import idautils
 import ida_nalt
-import hashlib
-import pickle 
 import ida_dbg
 
 MD5_hash_data_file = None
