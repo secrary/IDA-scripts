@@ -1,6 +1,6 @@
 # dumpDyn
 
-If a process allocates a dynamic memory using `VirtualAlloc`, `HeapAlloc`, `new`, etc. and continues execution from the address, the most of times, the memory address will be different for each different execution, it means that if we comment, rename variables or set breakpoints, nothing of this will be left in the next execution because the shellcode or code section will take a different memory address.
+If a process allocates a dynamic memory using `VirtualAlloc`, `HeapAlloc`, `new`, etc. and continues execution from that address, most of times, the memory address will be different for each different execution, it means that if we comment, rename variables or set breakpoints, nothing of this will be left in the next execution because the shellcode or code section will take a different memory address.
 
 `dumpDyn.py` is `IDAPython` plugin(script) which saves `comments`, `names` and `breakpoints` from one execution to another.
 
@@ -8,7 +8,7 @@ If a process allocates a dynamic memory using `VirtualAlloc`, `HeapAlloc`, `new`
 
 ![USAGE](https://user-images.githubusercontent.com/16405698/49311939-70f5b980-f4da-11e8-81d6-09bd083d4e49.PNG)
 
-If `VirtualAlloc`/`VirtualAllocEx` is used to allocate a dynamic memory (which is in case of the most malware), you can use icons on the toolbar to `save` and `restore` your work:
+If `VirtualAlloc`/`VirtualAllocEx` is used to allocate a dynamic memory (which is the case with most malware), you can use icons on the toolbar to `save` and `restore` your work:
 
 [DEMO: https://www.youtube.com/watch?v=Z53AlWPAwCc](https://www.youtube.com/watch?v=Z53AlWPAwCc)
 
