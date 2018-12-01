@@ -1,5 +1,7 @@
 # dumpDyn
 
+Lasha Khasaia [@_qaz_qaz](https://twitter.com/_qaz_qaz)
+
 If a process allocates a dynamic memory using `VirtualAlloc`, `HeapAlloc`, `new`, etc. and continues execution from that address, most of times, the memory address will be different for each different execution, it means that if we comment, rename variables or set breakpoints, nothing of this will be left in the next execution because the shellcode or code section will take a different memory address.
 
 `dumpDyn.py` is `IDAPython` plugin(script) which saves `comments`, `names` and `breakpoints` from one execution to another.
