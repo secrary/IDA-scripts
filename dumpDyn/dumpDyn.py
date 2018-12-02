@@ -10,14 +10,15 @@ import hashlib
 import pickle 
 
 import ida_name
-import idautils
 import ida_nalt
 import ida_dbg
 import ida_bytes
 import ida_ida
 import ida_kernwin
 import ida_segment
+import ida_auto
 import idaapi
+import idautils
 
 MD5_hash_data_file = None
 SIGNATURE_SIZE = 0x10
@@ -73,11 +74,13 @@ def save_x(unique_name=None, start=None, size=None):
                         saved_data = received_data
 
       # save names (funcs, labels, etc)
+      # (addr, name, is_code)
       names_addr_name = []
       names = idautils.Names()
       for addr, name in names:
             if start <= addr and addr <= start + size:
-                  names_addr_name.append((addr - start, name))
+                  flags = ida_bytes.get_flags(addr)
+                  names_addr_name.append((addr - start, name, ida_bytes.is_code(flags)))
 
       # save comments
       comms_addr_type_comm = []
@@ -135,8 +138,11 @@ def restore_x(unique_name=None, start=None):
                         names = current_data[2]
                         
                         for name in names:
-                              # names: (rel_addr, name)
+                              # names: (rel_addr, name, is_code)
                               ida_name.set_name(start + name[0], name[1])
+                              flags = ida_bytes.get_flags(start + name[0])
+                              if (name[2] and not ida_bytes.is_code(flags)):
+                                    ida_auto.auto_make_code(start + name[0])
                         
                         # restore comments
                         # comms: (rel_addr, TYPE, comment)
