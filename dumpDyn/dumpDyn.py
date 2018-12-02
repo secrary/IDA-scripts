@@ -221,7 +221,7 @@ def main():
             buf = afile.read()
             hasher.update(buf)
       MD5_hash = hasher.hexdigest() # str
-      MD5_hash_data_file = input_filepath + "____rstr___" + MD5_hash
+      MD5_hash_data_file = input_filepath + "____dumpDyn___" + MD5_hash
 
   
 if __name__ == "__main__":
