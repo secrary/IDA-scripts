@@ -8,13 +8,15 @@ If a process allocates a dynamic memory using `VirtualAlloc`, `HeapAlloc`, `new`
 
 ## USAGE
 
-You can use icons on the toolbar to `save` and `restore` your work:
+![USAGE](https://user-images.githubusercontent.com/16405698/49311939-70f5b980-f4da-11e8-81d6-09bd083d4e49.PNG)
+
+If `VirtualAlloc`/`VirtualAllocEx` is used to allocate a dynamic memory (which is the case with most malware), you can use icons on the toolbar to `save` and `restore` your work:
 
 [DEMO: https://www.youtube.com/watch?v=Z53AlWPAwCc](https://www.youtube.com/watch?v=Z53AlWPAwCc)
 
 ![dumpdyn_1](https://user-images.githubusercontent.com/16405698/49311767-f7f66200-f4d9-11e8-81c5-8f8c648c0c9e.gif)
 
-Also, you can specify memory location and size:
+In any other case(`HeapAlloc`, `malloc`, `new`, etc), you need to specify memory location and size:
 
 ![1](https://user-images.githubusercontent.com/16405698/49311821-26743d00-f4da-11e8-883a-7205df03125e.PNG)
 
