@@ -26,7 +26,16 @@ import idautils
 
 MD5_hash_data_file = None
 SIGNATURE_SIZE = 0x10
+remove_on_exit_bpts = []
 
+class MyDbgHook(ida_dbg.DBG_Hooks):
+    def dbg_process_exit(self, pid, tid, ea, code):
+        # remove breakpoints from the dynamically allocated memory
+        global remove_on_exit_bpts
+        for n in remove_on_exit_bpts:
+            ida_dbg.del_bpt(n)
+        remove_on_exit_bpts = []
+    
 
 class save_class(idaapi.action_handler_t):
     def __init__(self):
@@ -102,9 +111,11 @@ def save_x(unique_name=None, start=None, size=None):
     # breakpoints
     bpts_addr_size_type = []
     bpt = ida_dbg.bpt_t()
+    global remove_on_exit_bpts
     for i in range(start, end + 1):
         if ida_dbg.get_bpt(i, bpt):
             bpts_addr_size_type.append((i - start, bpt.size, bpt.type))
+            remove_on_exit_bpts.append(i)
 
     # functions
     funcs_addr = []
@@ -261,6 +272,14 @@ def main():
     MD5_hash = hasher.hexdigest()  # str
     MD5_hash_data_file = input_filepath + "____dumpDyn___" + MD5_hash
 
-
 if __name__ == "__main__":
+    # Remove an existing debug hook
+    try:
+        if debughook:
+            debughook.unhook()
+    except:
+        pass
+    debughook = MyDbgHook()
+    debughook.hook()
+
     main()
