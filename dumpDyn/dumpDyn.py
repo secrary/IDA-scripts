@@ -124,6 +124,9 @@ def save_x(unique_name=None, start=None, size=None):
         with open(MD5_hash_data_file, "wb") as ifile:
             serial_data = pickle.dumps(saved_data)
             ifile.write(serial_data)
+            print("dumpDyn::save:\n\
+            Name: {}\n\
+            Start address: {}".format(unique_name, hex(start)))
 
 
 def restore_x(unique_name=None, start=None):
@@ -146,6 +149,10 @@ def restore_x(unique_name=None, start=None):
         with open(MD5_hash_data_file, "rb") as ifile:
             received_data = pickle.loads(ifile.read())
             saved_data = received_data
+
+            print("dumpDyn::restore\n\
+            Name: {}\n\
+            Restore address: {}\n".format(unique_name, hex(start)))
 
             # (start_addr, end_addr, names, comms, bpts, funcs)
             if unique_name in saved_data:
