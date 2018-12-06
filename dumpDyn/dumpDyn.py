@@ -20,6 +20,7 @@ import ida_bytes
 import ida_kernwin
 import ida_segment
 import ida_auto
+import ida_funcs
 import idaapi
 import idautils
 
@@ -78,7 +79,7 @@ def save_x(unique_name=None, start=None, size=None):
             if received_data:
                 saved_data = received_data
 
-    # save names (funcs, labels, etc)
+    # save names (func_names, labels, etc)
     # (addr, name, is_code)
     names_addr_name = []
     names = idautils.Names()
@@ -105,8 +106,19 @@ def save_x(unique_name=None, start=None, size=None):
         if ida_dbg.get_bpt(i, bpt):
             bpts_addr_size_type.append((i - start, bpt.size, bpt.type))
 
+    # functions
+    funcs_addr = []
+    flag = ida_bytes.get_flags(start)
+    if ida_bytes.is_func(flag):
+        funcs_addr.append(0) # start addr
+    next_func =  ida_funcs.get_next_func(start)
+    while next_func:
+        funcs_addr.append(next_func.start_ea - start)
+        next_func = ida_funcs.get_next_func(next_func.start_ea)
+
+
     # SAVE
-    saved_data[unique_name] = (start, start + end, names_addr_name, comms_addr_type_comm, bpts_addr_size_type)
+    saved_data[unique_name] = (start, start + end, names_addr_name, comms_addr_type_comm, bpts_addr_size_type, funcs_addr)
 
     if MD5_hash_data_file:
         with open(MD5_hash_data_file, "wb") as ifile:
@@ -135,7 +147,7 @@ def restore_x(unique_name=None, start=None):
             received_data = pickle.loads(ifile.read())
             saved_data = received_data
 
-            # (start_addr, end_addr, names, comms, bpts)
+            # (start_addr, end_addr, names, comms, bpts, funcs)
             if unique_name in saved_data:
                 current_data = saved_data[unique_name]
 
@@ -162,11 +174,16 @@ def restore_x(unique_name=None, start=None):
                 for bpt in bpts:
                     ida_dbg.add_bpt(start + bpt[0], bpt[1], bpt[2])
 
+                # restore functions
+                funcs_addr = current_data[5]
+                for addr in funcs_addr:
+                    ida_auto.auto_make_proc(start + addr) # make code & func
+
 
 def main():
     print("\nUsage:\n\
-      save_x(\"unique_name\", start_addr, size) - save names, comments, breakpoints\n\
-      restore_x(\"unique_name\", start_addr) - restore names, comments, breakpoints\n\
+      save_x(\"unique_name\", start_addr, size) - save names, comments, breakpoints, functions\n\
+      restore_x(\"unique_name\", start_addr) - restore names, comments, breakpoints, functions\n\
       Example:\n\t\
       save_x(\"first_shellcode\", 0x12340000, 0x1000)\n\t\
       restore_x(\"first_shellcode\", 0x12340000)\n\t\
