@@ -7,4 +7,5 @@
 
 ## Credits
 - Disassembly powered by [Capstone](https://www.capstone-engine.org/)
+- Decompressing powered by [zstd](https://github.com/facebook/zstd)
 - Icon by [freepik](https://www.flaticon.com/authors/freepik)

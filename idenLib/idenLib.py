@@ -17,13 +17,14 @@ import ida_auto
 import ida_funcs
 import idaapi
 import idautils
-import hashlib
 import os
 import struct
+import zstd
 from capstone import *
 
 MIN_FUNC_SIZE = 0x20
 MAX_FUNC_SIZE = 0x100
+PLUGIN_VERSION = "idenLib v0.2"
 
 def get_names():
     for ea, name in idautils.Names():
@@ -58,43 +59,42 @@ def getOpcodes(addr, size):
     for i in md.disasm(instr_bytes, size):
         # get last opcode
         if (i.opcode[3] != 0):
-            opcodes_buf += struct.pack("B", i.opcode[3])
+            opcodes_buf += "%02x" % (i.opcode[3])
         elif (i.opcode[2] != 0):
-            opcodes_buf += struct.pack("B", i.opcode[2])
+            opcodes_buf += "%02x" % (i.opcode[2])
         elif(i.opcode[1] != 0):
-            opcodes_buf += struct.pack("B", i.opcode[1])
+            opcodes_buf += "%02x" % (i.opcode[1])
         else:
-            opcodes_buf += struct.pack("B", i.opcode[0])
+            opcodes_buf += "%02x" % (i.opcode[0])
     return opcodes_buf
 
 def idenLib():
     # function sigs from the current binary
-    hash_addr = {}
+    func_bytes_addr = {}
     for addr, size in get_func_ranges():
         f_bytes = getOpcodes(addr, size)
-        hasher = hashlib.md5()
-        hasher.update(f_bytes)
-        MD5_hash = hasher.hexdigest()
-        hash_addr[MD5_hash] = addr
+        func_bytes_addr[f_bytes] = addr
         
     # load sigs
-    hash_dir = {}
+    func_sigs = {}
     ida_dir = ida_diskio.idadir("")
     symEx_dir = ida_dir + os.sep + "SymEx"
     if not os.path.isdir(symEx_dir):
         printf("[!] There is no {} directory".format(symEx_dir))
     else:
         for file in files(symEx_dir):
-            with open(file, 'r') as ifile:
-                sig = ifile.readlines()
+            with open(file, 'rb') as ifile:
+                sig = ifile.read()
+                sig = zstd.decompress(sig).strip()
+                sig = sig.split(b"\r\n")
                 for line in sig:
-                    hash_value, name = line.split(" ")
-                    hash_dir[hash_value.strip()] = name.strip()
+                    sig_opcodes, name = line.split(" ")
+                    func_sigs[sig_opcodes.strip()] = name.strip()
     # apply sigs
     counter = 0
-    for hash_value, addr in hash_addr.items():
-        if hash_dir.has_key(hash_value):
-            func_name = hash_dir[hash_value]
+    for sig_opcodes, addr in func_bytes_addr.items():
+        if func_sigs.has_key(sig_opcodes):
+            func_name = func_sigs[sig_opcodes]
             current_name = ida_funcs.get_func_name(addr)
             if (current_name == func_name):
                 continue
@@ -135,7 +135,7 @@ def main():
             act_icon))
     # Insert the action in a toolbar
     idaapi.attach_action_to_toolbar("DebugToolBar", act_name)
-    print("idenLib v0.1")
+    print(PLUGIN_VERSION)
 
 
 if __name__ == "__main__":
