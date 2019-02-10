@@ -86,7 +86,7 @@ def idenLib():
             with open(file, 'rb') as ifile:
                 sig = ifile.read()
                 sig = zstd.decompress(sig).strip()
-                sig = sig.split(b"\r\n")
+                sig = sig.split(b"\n")
                 for line in sig:
                     sig_opcodes, name = line.split(" ")
                     func_sigs[sig_opcodes.strip()] = name.strip()
