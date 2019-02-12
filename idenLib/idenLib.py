@@ -1,7 +1,7 @@
 # -------------------------------------------------------------------------------
 #
-# Copyright (c) 2018, Lasha Khasaia @_qaz_qaz
-# Licensed under the GNU GPL v3.
+# Copyright (c) 2019
+# Lasha Khasaia @_qaz_qaz
 #
 # -------------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ import idautils
 import ida_name
 import os
 import zstd
-from capstone import *
+import capstone
 
 MIN_FUNC_SIZE = 0x20
 MAX_FUNC_SIZE = 0x100
@@ -28,23 +28,23 @@ PLUGIN_VERSION = "v0.3"
 __EA64__ = ida_idaapi.BADADDR == 0xFFFFFFFFFFFFFFFFL
 
 if __EA64__ :
-    CAPSTONE_MODE = CS_MODE_64
+    CAPSTONE_MODE = capstone.CS_MODE_64
     SIG_EXT = ".sig64"
 else:
-    CAPSTONE_MODE = CS_MODE_32
+    CAPSTONE_MODE = capstone.CS_MODE_32
     SIG_EXT = ".sig"
 
-def get_names():
+def getNames():
     for ea, name in idautils.Names():
         yield name
 
-def files(path):  
+def getFiles(path):  
     for file in os.listdir(path):
         if os.path.isfile(os.path.join(path, file)):
             yield path + "\\" + file
 
 # return (start_ea, size)
-def get_func_ranges():
+def getFuncRanges():
     funcs_addr = []
     start = 0
     next_func =  ida_funcs.get_next_func(start)
@@ -60,7 +60,7 @@ def get_func_ranges():
         next_func = ida_funcs.get_next_func(next_func.start_ea)
 
 def getOpcodes(addr, size):
-    md = Cs(CS_ARCH_X86, CAPSTONE_MODE)
+    md = capstone.Cs(capstone.CS_ARCH_X86, CAPSTONE_MODE)
     md.detail = True
     instr_bytes = ida_bytes.get_bytes(addr, size)
     opcodes_buf = b''
@@ -79,7 +79,7 @@ def getOpcodes(addr, size):
 def idenLib():
     # function sigs from the current binary
     func_bytes_addr = {}
-    for addr, size in get_func_ranges():
+    for addr, size in getFuncRanges():
         f_bytes = getOpcodes(addr, size)
         func_bytes_addr[f_bytes] = addr
         
@@ -90,7 +90,7 @@ def idenLib():
     if not os.path.isdir(symEx_dir):
         printf("[idenLib - FAILED] There is no {} directory".format(symEx_dir))
     else:
-        for file in files(symEx_dir):
+        for file in getFiles(symEx_dir):
             if not file.endswith(SIG_EXT):
                 continue
             with open(file, 'rb') as ifile:
@@ -109,7 +109,7 @@ def idenLib():
             if (current_name == func_name):
                 continue
             digit = 1
-            while func_name in get_names():
+            while func_name in getNames():
                 func_name = func_name + str(digit)
                 digit = digit + 1
             ida_name.set_name(addr, func_name, ida_name.SN_NOCHECK)
