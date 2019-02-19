@@ -13,8 +13,10 @@ import ida_funcs
 import idaapi
 import ida_idaapi
 import ida_diskio
+import ida_ua
 import idautils
 import ida_name
+import idc
 import os
 import zstd
 import capstone
@@ -22,7 +24,7 @@ import capstone
 MIN_FUNC_SIZE = 0x20
 MAX_FUNC_SIZE = 0x100
 PLUGIN_NAME = "idenLib"
-PLUGIN_VERSION = "v0.3"
+PLUGIN_VERSION = "v0.4"
 
 # __EA64__ is set if IDA is running in 64-bit mode
 __EA64__ = ida_idaapi.BADADDR == 0xFFFFFFFFFFFFFFFFL
@@ -85,10 +87,11 @@ def idenLib():
         
     # load sigs
     func_sigs = {}
+    mainSigs = {}
     ida_dir = ida_diskio.idadir("")
     symEx_dir = ida_dir + os.sep + "SymEx"
     if not os.path.isdir(symEx_dir):
-        printf("[idenLib - FAILED] There is no {} directory".format(symEx_dir))
+        print("[idenLib - FAILED] There is no {} directory".format(symEx_dir))
     else:
         for file in getFiles(symEx_dir):
             if not file.endswith(SIG_EXT):
@@ -99,6 +102,10 @@ def idenLib():
                 sig = sig.split(b"\n")
                 for line in sig:
                     sig_opcodes, name = line.split(" ")
+                    if '_' in sig_opcodes: # "main" signatures
+                        opcodeMain, indexMain = sig_opcodes.split('_')
+                        mainSigs[opcodeMain] = (name.strip(), int(indexMain))
+                        continue
                     func_sigs[sig_opcodes.strip()] = name.strip()
     # apply sigs
     counter = 0
@@ -106,15 +113,25 @@ def idenLib():
         if func_sigs.has_key(sig_opcodes):
             func_name = func_sigs[sig_opcodes]
             current_name = ida_funcs.get_func_name(addr)
-            if (current_name == func_name):
-                continue
-            digit = 1
-            while func_name in getNames():
-                func_name = func_name + str(digit)
-                digit = digit + 1
-            ida_name.set_name(addr, func_name, ida_name.SN_NOCHECK)
-            print("{}: {}".format(hex(addr), func_name))
-            counter = counter + 1
+            if (current_name != func_name):
+                digit = 1
+                while func_name in getNames():
+                    func_name = func_name + str(digit)
+                    digit = digit + 1
+                ida_name.set_name(addr, func_name, ida_name.SN_NOCHECK)
+                print("{}: {}".format(hex(addr), func_name))
+                counter = counter + 1
+        if mainSigs.has_key(sig_opcodes): # "main" sig
+            callInstr = mainSigs[sig_opcodes][1] + addr
+            if ida_ua.print_insn_mnem(callInstr) == "call":
+                call_target = idc.get_operand_value(callInstr, 0)
+                current_name = ida_funcs.get_func_name(addr)
+                func_name = mainSigs[sig_opcodes][0]
+                if (current_name != func_name):
+                    ida_name.set_name(call_target, func_name, ida_name.SN_NOCHECK)
+                    print("{}: {}".format(hex(call_target), func_name))
+                    counter = counter + 1
+            
             
     print("[idenLib] Applied to {} function(s)".format(counter))
 
