@@ -16,6 +16,7 @@ import ida_diskio
 import ida_ua
 import idautils
 import ida_name
+import ida_nalt
 import idc
 import os
 import zstd
@@ -103,12 +104,14 @@ def idenLib():
                 for line in sig:
                     sig_opcodes, name = line.split(" ")
                     if '_' in sig_opcodes: # "main" signatures
-                        opcodeMain, indexMain = sig_opcodes.split('_')
-                        mainSigs[opcodeMain] = (name.strip(), int(indexMain))
+                        opcodeMain, mainIndexes = sig_opcodes.split('_')
+                        fromFunc, fromBase = mainIndexes.split("!")
+                        mainSigs[opcodeMain] = (name.strip(), int(fromFunc), int(fromBase))
                         continue
                     func_sigs[sig_opcodes.strip()] = name.strip()
     # apply sigs
     counter = 0
+    mainDetected = False
     for sig_opcodes, addr in func_bytes_addr.items():
         if func_sigs.has_key(sig_opcodes):
             func_name = func_sigs[sig_opcodes]
@@ -125,13 +128,31 @@ def idenLib():
             callInstr = mainSigs[sig_opcodes][1] + addr
             if ida_ua.print_insn_mnem(callInstr) == "call":
                 call_target = idc.get_operand_value(callInstr, 0)
-                current_name = ida_funcs.get_func_name(addr)
+                current_name = ida_funcs.get_func_name(call_target)
                 func_name = mainSigs[sig_opcodes][0]
                 if (current_name != func_name):
                     ida_name.set_name(call_target, func_name, ida_name.SN_NOCHECK)
                     print("{}: {}".format(hex(call_target), func_name))
                     counter = counter + 1
-            
+                    mainDetected = True
+    if not mainDetected:
+        for entry in idautils.Entries():
+            for sig_opcodes, name_funcRva_EntryRva in mainSigs.items():
+                callInstr = name_funcRva_EntryRva[2] + entry[2] # from EP
+                if ida_ua.print_insn_mnem(callInstr) == "call":
+                    fromFunc = name_funcRva_EntryRva[1]
+                    func_start = callInstr - fromFunc
+                    func_opcodes = getOpcodes(func_start, MAX_FUNC_SIZE)
+                    if func_opcodes.startswith(sig_opcodes):
+                        call_target = idc.get_operand_value(callInstr, 0)
+                        current_name = ida_funcs.get_func_name(call_target)
+                        func_name = mainSigs[sig_opcodes][0]
+                        if (current_name != func_name):
+                            ida_name.set_name(call_target, func_name, ida_name.SN_NOCHECK)
+                            print("{}: {}".format(hex(call_target), func_name))
+                            counter = counter + 1
+                            mainDetected = True
+                            break
             
     print("[idenLib] Applied to {} function(s)".format(counter))
 
