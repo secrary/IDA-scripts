@@ -21,11 +21,14 @@ import idc
 import os
 import zstd
 import capstone
+import cPickle as pickle
 
 MIN_FUNC_SIZE = 0x20
 MAX_FUNC_SIZE = 0x100
 PLUGIN_NAME = "idenLib"
 PLUGIN_VERSION = "v0.4"
+
+local_appdata = os.getenv('LOCALAPPDATA')
 
 # __EA64__ is set if IDA is running in 64-bit mode
 __EA64__ = ida_idaapi.BADADDR == 0xFFFFFFFFFFFFFFFFL
@@ -33,9 +36,20 @@ __EA64__ = ida_idaapi.BADADDR == 0xFFFFFFFFFFFFFFFFL
 if __EA64__ :
     CAPSTONE_MODE = capstone.CS_MODE_64
     SIG_EXT = ".sig64"
+    idenLibCache = local_appdata + os.sep + PLUGIN_NAME + os.sep + "idenLibCache64"
+    idenLibCacheMain = local_appdata + os.sep + PLUGIN_NAME + os.sep + "idenLibCacheMain64"
 else:
     CAPSTONE_MODE = capstone.CS_MODE_32
     SIG_EXT = ".sig"
+    idenLibCache = local_appdata + os.sep + PLUGIN_NAME + os.sep + "idenLibCache"
+    idenLibCacheMain = local_appdata + os.sep + PLUGIN_NAME + os.sep + "idenLibCacheMain"
+idenLib_appdata = local_appdata + os.sep + PLUGIN_NAME
+
+func_sigs = {}
+mainSigs = {}
+
+ida_dir = ida_diskio.idadir("")
+symEx_dir = ida_dir + os.sep + "SymEx"
 
 def getNames():
     for ea, name in idautils.Names():
@@ -79,7 +93,32 @@ def getOpcodes(addr, size):
             opcodes_buf += "%02x" % (i.opcode[0])
     return opcodes_buf
 
+def idenLibProcessSignatures():
+    global func_sigs
+    global mainSigs
+    for file in getFiles(symEx_dir):
+        if not file.endswith(SIG_EXT):
+            continue
+        with open(file, 'rb') as ifile:
+            sig = ifile.read()
+            sig = zstd.decompress(sig).strip()
+            sig = sig.split(b"\n")
+            for line in sig:
+                sig_opcodes, name = line.split(" ")
+                if '_' in sig_opcodes: # "main" signatures
+                    opcodeMain, mainIndexes = sig_opcodes.split('_')
+                    fromFunc, fromBase = mainIndexes.split("!")
+                    mainSigs[opcodeMain] = (name.strip(), int(fromFunc), int(fromBase))
+                    continue
+                func_sigs[sig_opcodes.strip()] = name.strip()
+    if not os.path.isdir(idenLib_appdata):
+        os.mkdir(idenLib_appdata)
+    pickle.dump(func_sigs, open( idenLibCache, "wb" ))
+    pickle.dump(mainSigs, open( idenLibCacheMain, "wb" ))
+
 def idenLib():
+    global func_sigs
+    global mainSigs
     # function sigs from the current binary
     func_bytes_addr = {}
     for addr, size in getFuncRanges():
@@ -87,28 +126,16 @@ def idenLib():
         func_bytes_addr[f_bytes] = addr
         
     # load sigs
-    func_sigs = {}
-    mainSigs = {}
-    ida_dir = ida_diskio.idadir("")
-    symEx_dir = ida_dir + os.sep + "SymEx"
     if not os.path.isdir(symEx_dir):
         print("[idenLib - FAILED] There is no {} directory".format(symEx_dir))
+        return
+
+    if os.path.isfile(idenLibCache):
+        func_sigs = pickle.load( open( idenLibCache, "rb" ) )
+        if os.path.isfile(idenLibCacheMain):
+            mainSigs = pickle.load( open( idenLibCacheMain, "rb" ) )
     else:
-        for file in getFiles(symEx_dir):
-            if not file.endswith(SIG_EXT):
-                continue
-            with open(file, 'rb') as ifile:
-                sig = ifile.read()
-                sig = zstd.decompress(sig).strip()
-                sig = sig.split(b"\n")
-                for line in sig:
-                    sig_opcodes, name = line.split(" ")
-                    if '_' in sig_opcodes: # "main" signatures
-                        opcodeMain, mainIndexes = sig_opcodes.split('_')
-                        fromFunc, fromBase = mainIndexes.split("!")
-                        mainSigs[opcodeMain] = (name.strip(), int(fromFunc), int(fromBase))
-                        continue
-                    func_sigs[sig_opcodes.strip()] = name.strip()
+        idenLibProcessSignatures()
     # apply sigs
     counter = 0
     mainDetected = False
