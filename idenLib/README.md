@@ -9,6 +9,8 @@
 - Copy signatures under `SymEx` folder
 - Install dependencies: [`zstd`](https://pypi.org/project/zstd/) and [`capstone`](https://pypi.org/project/capstone/) (`pip2 install zstd capstone`)
 
+- You need to refresh signatures after adding new signature files
+![refresh](https://user-images.githubusercontent.com/16405698/53285741-15933a80-375c-11e9-97cb-d38bb0b5c52e.png)
 
 
 ## Credits
