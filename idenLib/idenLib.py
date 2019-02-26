@@ -110,8 +110,12 @@ def idenLibProcessSignatures():
                     opcodeMain, mainIndexes = sig_opcodes.split('_')
                     fromFunc, fromBase = mainIndexes.split("!")
                     mainSigs[opcodeMain] = (name.strip(), int(fromFunc), int(fromBase))
-                    continue
-                func_sigs[sig_opcodes.strip()] = name.strip()
+                elif '+' in sig_opcodes:
+                    opcodes, strBranches = sig_opcodes.split('+')
+                    nBranches = int(strBranches)
+                    func_sigs[opcodes.strip()] = (name.strip(), nBranches)
+                else:
+                    func_sigs[sig_opcodes.strip()] = (name.strip(), 0)
     if not os.path.isdir(idenLib_appdata):
         os.mkdir(idenLib_appdata)
     pickle.dump(func_sigs, open( idenLibCache, "wb" ))
@@ -143,7 +147,7 @@ def idenLib():
     mainDetected = False
     for sig_opcodes, addr in func_bytes_addr.items():
         if func_sigs.has_key(sig_opcodes):
-            func_name = func_sigs[sig_opcodes]
+            func_name = func_sigs[sig_opcodes][0]
             current_name = ida_funcs.get_func_name(addr)
             if (current_name != func_name):
                 digit = 1
